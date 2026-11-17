@@ -2,6 +2,10 @@
 
 ## 0.5.1 · 17 November 2026
 
+Published tag `v0.5.1`, runtime commit `46f346a`, main/dist. Original preview
+refreshed; blue selection across title, text and checkboxes visually checked in
+dark mode. Native light-mode verification remains pending.
+
 Selection appearance fix: apply the same explicit translucent blue selection
 colour to the editor root and its descendants, including inter-block gaps.
 Previously only descendants used system Highlight/HighlightText, allowing
