@@ -2,6 +2,11 @@
 
 ## 0.6.0 · 17 November 2026
 
+Published as `v0.6.0` at `e90cb141994bfe5c3d3ca9ef4aaeb5f1211ad27f`.
+Fresh public main clone matches both tested dist files byte for byte. Original
+preview rebuilt/reloaded with its four active pages retained. Native Buzz has
+not been updated by this session.
+
 Luke chose to keep the current ideas list, with each idea linking to its own
 editable detail page, rather than a database table. Adds Link page/Change link
 for the selected body block, an inline open-page button, and a Back control.
