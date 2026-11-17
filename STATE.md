@@ -2,6 +2,9 @@
 
 ## 0.3.0 · 17 November 2026
 
+Published as `v0.3.0` at `89b57f60a58d55044301ab284164be2f97d4dd81`.
+Public main/dist readback matched both tested install files byte for byte.
+
 Requested flexibility: whole-page select-all/backspace and collapsible page list.
 Title/body ⌘A/Ctrl+A and the Select all button now highlight all page writing;
 Backspace/Delete clears it while retaining the same page. One clear/replacement
