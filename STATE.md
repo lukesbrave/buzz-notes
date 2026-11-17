@@ -3,9 +3,10 @@
 ## 0.5.0 · 17 November 2026
 
 Published as `v0.5.0` at `0a19a37` on `main` / `dist`.
-Public main and release-commit install files match the tested package byte for
-byte (verified with a fresh request after GitHub raw caching briefly returned
-the previous bundle). The original port-18761 preview was rebuilt from canonical
+A fresh public default-branch clone and the release-commit install files match
+the tested package byte for byte. GitHub's raw main URL still returned the old
+cached bundle during readback; Buzz's Git download was verified separately.
+The original port-18761 preview was rebuilt from canonical
 dist and reloaded; its four active pages remain, with no browser errors.
 Native Buzz has not been updated by this session.
 
