@@ -24,7 +24,11 @@ export function apply(ctx) {
     const [trash,setTrash]=React.useState(false);
     const [active,setActive]=React.useState(null);
     const [menu,setMenu]=React.useState(false);
-    const [sidebar,setSidebar]=React.useState(false);
+    const [sidebar,setSidebar]=React.useState(()=>{try{const value=localStorage.getItem('bravebrand.simple-notes.sidebar');return value===null?null:value==='open';}catch{return null;}});
+    const [narrow,setNarrow]=React.useState(false);
+    const sidebarVisible=sidebar??!narrow;
+    const [fullSelection,setFullSelection]=React.useState(null);
+    const [clearUndo,setClearUndo]=React.useState(null);
     const [modal,setModal]=React.useState(null);
     const [importText,setImportText]=React.useState('');
     const [importError,setImportError]=React.useState('');
@@ -32,6 +36,14 @@ export function apply(ctx) {
     const root=React.useRef(null), pendingFocus=React.useRef(null), dialog=React.useRef(null), returnFocus=React.useRef(null);
     const pages=snap.data.pages.filter(p=>p.trashed===trash);
     const current=pages.find(p=>p.id===selected) || pages[0];
+    const allSelected=!!current&&fullSelection===current.id&&!trash;
+    const canUndoClear=!!current&&clearUndo?.after===current&&!trash;
+    React.useLayoutEffect(()=>{
+      const measure=()=>setNarrow(root.current.clientWidth<=500);
+      measure();const observer=new ResizeObserver(measure);observer.observe(root.current);return()=>observer.disconnect();
+    },[]);
+    React.useEffect(()=>{setFullSelection(null);setClearUndo(null);},[current?.id,trash,modal]);
+    function toggleSidebar(){const next=!sidebarVisible;setSidebar(next);try{localStorage.setItem('bravebrand.simple-notes.sidebar',next?'open':'closed');}catch{/* The control still works if preferences cannot be saved. */}}
     const currentBlock=current?.blocks.find(b=>b.id===active) || current?.blocks[0];
     const [,refreshFocus]=React.useReducer(n=>n+1,0);
     const focus=(target,position=0)=>{pendingFocus.current={target,position};refreshFocus();};
@@ -47,12 +59,36 @@ export function apply(ctx) {
       dialog.current?.querySelector('textarea,button')?.focus();
       return()=>returnFocus.current?.focus();
     },[modal]);
-    const edit=fn=>{if(current&&!trash)store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...fn(p),updated:Date.now()}:p)}));};
+    const edit=fn=>{setClearUndo(null);if(current&&!trash)store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...fn(p),updated:Date.now()}:p)}));};
     const editBlock=(bid,patch)=>edit(p=>({...p,blocks:p.blocks.map(b=>b.id===bid?{...b,...patch}:b)}));
-    function addPage() {const p=page();store.change(d=>({...d,pages:[...d.pages,p]}));setTrash(false);setQuery('');setSelected(p.id);setSidebar(false);setActive(p.blocks[0].id);focus('title');}
-    function choose(p) {setSelected(p.id);setMenu(false);setSlash(null);setSidebar(false);setActive(p.blocks[0].id);}
+    function addPage() {const p=page();store.change(d=>({...d,pages:[...d.pages,p]}));setTrash(false);setQuery('');setSelected(p.id);if(narrow)setSidebar(false);setActive(p.blocks[0].id);focus('title');}
+    function choose(p) {setSelected(p.id);setMenu(false);setSlash(null);if(narrow)setSidebar(false);setActive(p.blocks[0].id);}
     function changeType(type,bid=currentBlock?.id) {if(!bid)return;edit(p=>({...p,blocks:p.blocks.map(b=>b.id===bid?{...b,type,text:b.text==='/'?'':b.text}:b)}));setSlash(null);focus(bid);}
     function insertAfter(bid) {const b=block();edit(p=>{const blocks=[...p.blocks];blocks.splice(blocks.findIndex(x=>x.id===bid)+1,0,b);return {...p,blocks};});setActive(b.id);focus(b.id);}
+    function selectWriting(){if(!current||trash)return;setFullSelection(current.id);setSlash(null);setMenu(false);focus('title');}
+    function replaceWriting(text=''){
+      if(!current||trash)return;
+      const before=current;
+      const blocks=text.replace(/\r\n?/g,'\n').split('\n').map(line=>block('text',line));
+      edit(p=>({...p,title:'',blocks}));
+      setClearUndo({before,after:store.get().data.pages.find(p=>p.id===before.id)});
+      setFullSelection(null);setSlash(null);setActive(blocks[0].id);focus(blocks[0].id,blocks[0].text.length);
+    }
+    function undoClear(){if(!canUndoClear)return;const before=clearUndo.before;edit(()=>before);setFullSelection(null);focus('title');}
+    function writingKey(e){
+      if(trash||e.nativeEvent.isComposing)return;
+      const inText=e.target.matches('textarea.bn-title, textarea[data-block]');
+      if(!inText)return;
+      const mod=e.metaKey||e.ctrlKey;
+      if(mod&&!e.altKey&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopPropagation();selectWriting();return;}
+      if(mod&&!e.shiftKey&&e.key.toLowerCase()==='z'&&canUndoClear){e.preventDefault();e.stopPropagation();undoClear();return;}
+      if(!allSelected)return;
+      if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();e.stopPropagation();replaceWriting();return;}
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();setFullSelection(null);return;}
+      if(!mod&&!e.altKey&&(e.key.length===1||e.key==='Enter')){e.preventDefault();e.stopPropagation();replaceWriting(e.key==='Enter'?'':e.key);return;}
+      if(!mod){setFullSelection(null);}
+    }
+    function copyWriting(e,cut=false){if(!allSelected)return;e.preventDefault();e.clipboardData.setData('text/plain',markdown(current));if(cut)replaceWriting();}
     function keydown(e,b,index) {
       if(e.nativeEvent.isComposing)return;
       if(e.key==='Escape'){setSlash(null);return;}
@@ -76,7 +112,7 @@ export function apply(ctx) {
     const filtered=pages.filter(p=>(p.title+' '+p.blocks.map(b=>b.text).join(' ')).toLowerCase().includes(query.toLowerCase()));
     const blank=current&&!current.title&&current.blocks.length===1&&!current.blocks[0].text;
     function template(type){const blocks=type==='idea'?[block('subheading','The idea'),block(),block('subheading','Why it matters'),block(),block('subheading','Notes & links'),block()]:[block('todo'),block('todo'),block('todo')];edit(p=>({...p,title:type==='idea'?'Content idea':'To-do list',blocks}));setActive(blocks[type==='idea'?1:0].id);focus(blocks[type==='idea'?1:0].id);}
-    return <div style={{containerType:'inline-size',containerName:'notes',height:'100%',minHeight:0}}><section className="bn" ref={root} data-sidebar={sidebar} aria-label="Notes" onKeyDown={e=>{if(e.key==='Escape'){if(modal)setModal(null);else{setMenu(false);setSlash(null);setSidebar(false);}}}}>
+    return <div style={{containerType:'inline-size',containerName:'notes',height:'100%',minHeight:0}}><section className="bn" ref={root} data-sidebar={sidebarVisible} aria-label="Notes" onPointerDownCapture={()=>setFullSelection(null)} onKeyDown={e=>{if(e.key==='Escape'){if(modal)setModal(null);else{setMenu(false);setSlash(null);if(narrow)setSidebar(false);}}}}>
       <style>{css}</style>
       <aside className="bn-sidebar" aria-label="Your pages">
         <div className="bn-brand"><Icon/>Notes</div>
@@ -87,14 +123,15 @@ export function apply(ctx) {
         <div className="bn-side-footer"><button onClick={()=>{setTrash(!trash);setQuery('');setMenu(false);setSlash(null);}}><Icon name={trash?'page':'trash'}/>{trash?'All pages':'Trash'}</button><button onClick={showBackup}><Icon name="backup"/>Backup</button></div>
       </aside>
       <main className="bn-main">
-        <header className="bn-topbar"><button className="bn-mobile-toggle" aria-label="Toggle page list" aria-expanded={sidebar} onClick={()=>setSidebar(!sidebar)}><Icon name="menu"/></button><div className="bn-breadcrumb"><Icon/><span className="bn-ellipsis">{current?.title|| (current?'Untitled page':'Notes')}</span></div><span className="bn-saved" role="status">{snap.error?'Not saved':snap.saved?'Saved on this Mac':'On this Mac'}</span>{current&&<button aria-label="Page options" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Icon name="more"/></button>}</header>
+        <header className="bn-topbar"><button className="bn-sidebar-toggle" aria-label={sidebarVisible?"Collapse sidebar":"Expand sidebar"} title={sidebarVisible?"Collapse sidebar":"Expand sidebar"} aria-expanded={sidebarVisible} onClick={toggleSidebar}><Icon name="menu"/></button><div className="bn-breadcrumb"><Icon/><span className="bn-ellipsis">{current?.title|| (current?'Untitled page':'Notes')}</span></div><span className="bn-saved" role="status">{snap.error?'Not saved':snap.saved?'Saved on this Mac':'On this Mac'}</span>{current&&<button aria-label="Page options" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Icon name="more"/></button>}</header>
         {snap.error&&<div role="alert" className="bn-alert">{snap.error} <button onClick={showBackup}>Backup</button></div>}
         {trash&&current&&<div className="bn-alert">This page is in Trash. <button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:false}:p)}));setTrash(false);setSelected(current.id);}}>Restore page</button></div>}
         {menu&&current&&<div className="bn-menu"><button onClick={()=>{setModal('markdown');setMenu(false);}}>Copy as Markdown</button>{!trash&&<><button onClick={()=>{const p={...current,id:id(),title:(current.title||'Untitled page')+' (copy)',blocks:current.blocks.map(b=>({...b,id:id()})),updated:Date.now()};store.change(d=>({...d,pages:[...d.pages,p]}));choose(p);}}>Duplicate page</button><button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:true}:p)}));setMenu(false);setSelected(null);}}>Move to Trash</button></>}<button onClick={()=>setMenu(false)}>Close menu</button></div>}
-        <div className="bn-scroll">{current?<article className="bn-document" key={current.id}>
+        <div className="bn-scroll">{current?<article className="bn-document" key={current.id} data-all-selected={allSelected} onKeyDownCapture={writingKey} onCopy={e=>copyWriting(e)} onCut={e=>copyWriting(e,true)} onPaste={e=>{if(allSelected){e.preventDefault();replaceWriting(e.clipboardData.getData('text/plain'));}}} onCompositionStart={()=>setFullSelection(null)}>
           <div className="bn-page-icon"><Icon/></div>
           <Area className="bn-title" aria-label="Page title" placeholder="Untitled page" value={current.title} readOnly={trash} onChange={e=>edit(p=>({...p,title:e.target.value.replace(/\n/g,' ')}))} onKeyDown={e=>{if(e.key==='Enter'&&!e.nativeEvent.isComposing){e.preventDefault();setActive(current.blocks[0].id);focus(current.blocks[0].id);}}}/>
-          {!trash&&<div className="bn-toolbar"><select aria-label="Block type" value={currentBlock?.type||'text'} onChange={e=>changeType(e.target.value)}>{TYPES.map(t=><option key={t} value={t}>{labels[t]}</option>)}</select><button onClick={()=>insertAfter(currentBlock?.id)}><Icon name="plus"/>Add block</button></div>}
+          {!trash&&<div className="bn-toolbar"><select aria-label="Block type" value={currentBlock?.type||'text'} onChange={e=>changeType(e.target.value)}>{TYPES.map(t=><option key={t} value={t}>{labels[t]}</option>)}</select><button onClick={()=>insertAfter(currentBlock?.id)}><Icon name="plus"/>Add block</button><button onClick={selectWriting} title="Select all writing (⌘A / Ctrl+A)">Select all</button>{canUndoClear&&<button onClick={undoClear}>Undo clear</button>}</div>}
+          {allSelected&&<div className="bn-selection-hint" role="status">All page text selected · Backspace to clear · Esc to cancel</div>}
           {blank&&!trash&&<div className="bn-templates"><button onClick={()=>template('idea')}><Icon name="ideas"/>Content idea</button><button onClick={()=>template('todo')}><Icon name="check"/>To-do list</button></div>}
           {current.blocks.map((b,index)=><React.Fragment key={b.id}><div className="bn-block" data-type={b.type} data-checked={b.type==='todo'&&b.checked}>
             {!trash&&<button className="bn-add-block" aria-label={`Insert block after block ${index+1}`} onClick={()=>insertAfter(b.id)}><Icon name="plus"/></button>}

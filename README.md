@@ -39,6 +39,15 @@ with your notes, or restore the backup if needed.
 ## Writing
 
 - **New page** creates a blank note; its title names the sidebar entry.
+- **⌘A** (Mac) or **Ctrl+A** (Windows/Linux), while writing in the title or a
+  block, highlights all writing on the current page. **Backspace/Delete** clears
+  the title and all blocks together, leaving the page itself in place. The
+  **Select all** button does the same selection; **Esc** cancels it.
+- **Undo clear** or **⌘Z/Ctrl+Z** restores that clear before further editing or
+  closing the editor. This is a single clear/replacement undo, not full history.
+- Use the top-left **Collapse sidebar / Expand sidebar** button to hide or show
+  your page list. The choice is remembered in this Buzz app. Search and backup
+  fields keep their normal, field-only select-all behavior.
 - **Enter** creates a block; **Shift+Enter** adds a line inside a block.
 - Type **/** in an empty block or use the type menu for text, headings, bullets,
   checkboxes, and quotes.
@@ -50,7 +59,7 @@ with your notes, or restore the backup if needed.
   copies without replacing existing pages. Markdown copy exports one page as text.
 
 This first version intentionally omits inline bold/italic, images, tables,
-block dragging, document-wide undo, collaboration, and cross-device syncing.
+block dragging, general document-wide undo, collaboration, and cross-device syncing.
 
 ## Where notes are saved
 

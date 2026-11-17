@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-11-17
+
+- Select all page writing with ⌘A/Ctrl+A or the Select all button, then clear it
+  with Backspace/Delete. Includes the title; preserves the page and other notes.
+- Undo the last whole-page clear/replacement before further edits or closing.
+- Collapse or expand the page sidebar at every width; remember the preference.
+
 ## 0.2.0 — 2026-11-17
 
 - Open Notes from the conversation's top toolbar into a tab beside chat.

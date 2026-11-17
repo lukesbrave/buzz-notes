@@ -1,5 +1,25 @@
 # Notes — release state
 
+## 0.3.0 · 17 November 2026
+
+Requested flexibility: whole-page select-all/backspace and collapsible page list.
+Title/body ⌘A/Ctrl+A and the Select all button now highlight all page writing;
+Backspace/Delete clears it while retaining the same page. One clear/replacement
+can be undone before subsequent edits or closing. Selection is scoped to the
+current page, leaving search, backups and other pages untouched. Native mouse
+selection remains within individual text fields; cross-block selection uses the
+shortcut/button. Sidebar collapse/expand is available at all widths and stores
+its preference separately from notebook data.
+
+Verification: all eight existing storage/panel tests pass. Browser harness
+confirmed a six-block page plus title clears in one Backspace; ⌘Z restores its
+content and formatting; the Select all button follows the same path; a cleared
+second page stays empty after reload while the first page remains intact;
+search's select-all/backspace only clears its query; sidebar collapse persists
+after reload and expands again. Browser logs had no errors/warnings. This is
+browser evidence, not native Buzz verification. ID, storage format and grants
+are unchanged. Source and built artifacts are distributed together on main/dist.
+
 ## 0.2.0 · 17 November 2026
 
 Published as `v0.2.0` at `2c3d352b43d8ff63626a9d2c9ba1707be41cf99b`.
