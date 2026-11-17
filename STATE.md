@@ -1,5 +1,21 @@
 # Notes — release state
 
+## 0.2.0 · 17 November 2026
+
+Requested change: move Notes to the conversation's top controls so agent chat
+can stay open. The Notes channel-header launcher now opens a retained tab in
+the conversation side pane (`channelPlacement: tab`, `keepOpen: true`). The
+old full-page address remains available, but no longer has a primary dock entry.
+Both surfaces use the same editor/store. Plugin ID, storage key and data format
+are unchanged; no migration, network permissions or access to chats was added.
+
+Verified against official Buzz v1.0.1 `src/features/panels/service.ts`, and the
+channel launcher pattern used by bundled Todos/Terminal. All eight automated
+checks pass. Browser harness verified open/close/reopen, note retention and an
+unchanged unsent chat draft; browser logs had no warnings/errors. This harness
+is explicitly a layout test, not native Buzz. Native placement/update testing
+remains outstanding. Release is distributed from `main` / `dist`.
+
 ## 0.1.0 · 17 November 2026
 
 Published GitHub-installable release for standard Buzz 1.0.1.

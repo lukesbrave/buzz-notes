@@ -1,6 +1,6 @@
 import css from './notes.css';
 import {createStore, page, block, id, restorePages, markdown, TYPES} from './store.mjs';
-export const inject = ['react', 'pages'];
+export const inject = ['react', 'pages', 'panels'];
 export function apply(ctx) {
   const React = ctx.react;
   const store = createStore({getItem:key=>localStorage.getItem(key), setItem:(key,value)=>localStorage.setItem(key,value)});
@@ -76,7 +76,7 @@ export function apply(ctx) {
     const filtered=pages.filter(p=>(p.title+' '+p.blocks.map(b=>b.text).join(' ')).toLowerCase().includes(query.toLowerCase()));
     const blank=current&&!current.title&&current.blocks.length===1&&!current.blocks[0].text;
     function template(type){const blocks=type==='idea'?[block('subheading','The idea'),block(),block('subheading','Why it matters'),block(),block('subheading','Notes & links'),block()]:[block('todo'),block('todo'),block('todo')];edit(p=>({...p,title:type==='idea'?'Content idea':'To-do list',blocks}));setActive(blocks[type==='idea'?1:0].id);focus(blocks[type==='idea'?1:0].id);}
-    return <div style={{containerType:'inline-size',containerName:'notes',height:'100%',minHeight:520}}><section className="bn" ref={root} data-sidebar={sidebar} aria-label="Notes" onKeyDown={e=>{if(e.key==='Escape'){if(modal)setModal(null);else{setMenu(false);setSlash(null);setSidebar(false);}}}}>
+    return <div style={{containerType:'inline-size',containerName:'notes',height:'100%',minHeight:0}}><section className="bn" ref={root} data-sidebar={sidebar} aria-label="Notes" onKeyDown={e=>{if(e.key==='Escape'){if(modal)setModal(null);else{setMenu(false);setSlash(null);setSidebar(false);}}}}>
       <style>{css}</style>
       <aside className="bn-sidebar" aria-label="Your pages">
         <div className="bn-brand"><Icon/>Notes</div>
@@ -114,5 +114,21 @@ export function apply(ctx) {
       </div></div>}
     </section></div>;
   }
-  ctx.pages.register({id:'main',title:'Notes',primary:true,placement:'dock',layout:'workspace',component:Notes});
+  // Retain the original page address for existing bookmarks, without a dock entry.
+  ctx.pages.register({id:'main',title:'Notes',layout:'workspace',component:Notes});
+  const target = 'bravebrand-notes:personal';
+  function Launcher({toggle, pressed, available}) {
+    return <button type="button" className="ui-button" data-size="sm" data-variant="ghost"
+      data-channel-panel-toggle="" aria-label="Toggle Notes" title="Notes"
+      aria-expanded={pressed} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 8px',borderRadius:6,color:'var(--text-secondary)',background:pressed?'var(--bg-chrome-selected)':'transparent',border:0,cursor:'pointer'}}
+      onClick={event=>{event.currentTarget.focus();if(available())toggle(target);}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z M9 8h6 M9 12h6 M9 16h4"/></svg>
+      <span>Notes</span>
+    </button>;
+  }
+  ctx.panels.register({
+    id:'notebook',title:'Notes',matches:value=>value===target,
+    channelLauncher:Launcher,channelPlacement:'tab',keepOpen:true,
+    component:Notes,
+  });
 }

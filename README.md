@@ -14,7 +14,10 @@ network access, AI subscription, or external service is required.
    **https://github.com/lukesbrave/buzz-notes**
 3. Leave the branch field blank (the default is **main**).
 4. Select **dist — Notes**, review the plugin, and install it with Notes enabled.
-5. Open **Notes** from Buzz's app navigation or search.
+5. Open an agent conversation and click **Notes** in its top toolbar.
+   Notes opens as a tab beside the conversation, so you can keep chatting.
+   The previous app-dock shortcut is removed; the original page address still
+   works through search/bookmarks.
 
 Buzz installs the ready-built files in `dist`; you do not need Node or npm.
 
@@ -66,8 +69,9 @@ Malformed saved data is preserved rather than silently reset.
 Targets standard Buzz **1.0.1**, checked against that version's manifest, page
 registration, and theme contracts. The browser harness passed editing,
 checkboxes, reopen persistence, search, Trash/restore, and additive backup
-restore. Six automated storage tests pass. Native Buzz installation and native
-appearance/lifecycle testing are still pending; this is the first test release.
+restore. Eight automated storage/panel tests pass. A browser layout harness also verified
+opening/closing Notes alongside an unchanged chat draft and remount persistence. Native Buzz installation and native
+appearance/lifecycle testing are still pending; native placement is still unverified.
 
 ## Development
 
@@ -76,8 +80,8 @@ has no external runtime imports.
 
 ```sh
 npm ci
-npm test
 npm run build
+npm test
 ```
 
 For the browser harness, run `node build.mjs --preview` and serve `tests/` over
