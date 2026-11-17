@@ -21,10 +21,11 @@
 .bn-rich .bn-task-control {flex-shrink:0;user-select:none;-webkit-user-select:none}
 .bn-rich .bn-task-control input {margin:7px 0 0;width:15px;height:15px;accent-color:var(--notes-muted)}
 .bn-rich [data-note-type=todo][data-checked=true]>div {text-decoration:line-through;color:var(--notes-muted)}
-.bn-rich ::selection {background:Highlight;color:HighlightText}
+/* Include the editor itself: WebKit paints inter-block selection gaps there. */
+.bn-rich::selection,.bn-rich *::selection {background:rgba(80,149,245,.35);color:inherit}
 .bn-rich .ProseMirror-selectednode {outline:2px solid var(--notes-muted)}
 .bn-rich .ProseMirror-separator {display:inline!important;border:none!important;margin:0!important}
-.bn-rich.ProseMirror-hideselection *::selection {background:transparent}
+.bn-rich.ProseMirror-hideselection::selection,.bn-rich.ProseMirror-hideselection *::selection {background:transparent}
 .bn-rich .ProseMirror-gapcursor {display:none;pointer-events:none;position:absolute}
 .bn-rich+.bn-templates {margin-top:18px}
 @container notes (max-width:680px){.bn-rich h1[data-note-title]{font-size:32px}}

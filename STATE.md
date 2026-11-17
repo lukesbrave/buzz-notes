@@ -1,5 +1,14 @@
 # Notes — release state
 
+## 0.5.1 · 17 November 2026
+
+Selection appearance fix: apply the same explicit translucent blue selection
+colour to the editor root and its descendants, including inter-block gaps.
+Previously only descendants used system Highlight/HighlightText, allowing
+WebKit/root selection styling to paint dark bands between blocks in light mode.
+Hidden-selection styling now covers the root too. No data or editor behavior
+changes. Existing 28 checks pass; native Buzz visual verification pending.
+
 ## 0.5.0 · 17 November 2026
 
 Published as `v0.5.0` at `0a19a37` on `main` / `dist`.
