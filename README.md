@@ -63,11 +63,40 @@ with your notes, or restore the backup if needed.
 This first version intentionally omits inline bold/italic, images, tables,
 reordering blocks by dragging, collaboration, and cross-device syncing.
 
+## Use an agent with Notes
+
+Update and enable Notes, then ask your agent to create or edit a page. For example:
+
+> Find the Notes plugin tools and add three video ideas to my Content ideas page.
+
+The plugin gives agents a short discovery instruction and tools to find, read,
+create and edit pages, including headings, bullets and checkboxes. Changes save
+in the same notebook and update the open editor. Edits require the latest page
+revision, so a stale agent response cannot replace a newer saved human edit.
+Removing a page sends it to recoverable Trash.
+
+For appearance or feature changes, ask:
+
+> Use the Notes developer guide to update the plugin's design in its GitHub repository.
+
+This requires an agent with coding/file tools and GitHub access. Notes provides
+the source and build/update workflow through `brave_notes_developer_info`; it
+cannot give an agent capabilities or credentials it does not already have.
+The agent publishes the approved update, then requests the usual Buzz update
+review. See [AGENT-GUIDE.md](AGENT-GUIDE.md) for the exact workflow and tool names.
+
+These tools are for your agents running through this Buzz app. A separately
+hosted agent does not automatically receive Mac-local plugin tools. If tools
+remain missing after updating, start a new conversation with a local agent and
+ask it to search for `brave_notes`.
+
 ## Where notes are saved
 
 Notes live in localStorage in this Buzz app profile on this Mac, across that
-profile's communities. They are **not uploaded to GitHub or Notion**, and are
-not exposed through agent tools. They are not encrypted by this plugin.
+profile's communities. The plugin does **not upload notes to GitHub or Notion**.
+Your owned agents running through this app can read/edit notes using the tools;
+requested note content then enters that agent's conversation/model context.
+Notes are not encrypted by this plugin.
 Clearing the app's webview/storage data can remove them. Keep a backup.
 
 If a save fails, the editor keeps your draft in memory and shows **Not saved**.
@@ -78,14 +107,17 @@ Malformed saved data is preserved rather than silently reset.
 ## Compatibility and verification
 
 Targets standard Buzz **1.0.1**, checked against that version's manifest, page
-registration, and theme contracts. The browser harness passed editing,
+registration, theme and agent-tool contracts. The browser harness passed editing,
 checkboxes, reopen persistence, search, Trash/restore, and additive backup
-restore. Fifteen automated editor/storage/panel tests pass. Real browser mouse-drag
+restore. Twenty-eight automated editor/storage/panel/agent tests pass. Real browser mouse-drag
 selection across a title, paragraph, bullet, checkbox and quote was deleted with
 Backspace and restored with Undo; saved checkbox state and sidebar toggling were
 also verified. A browser layout harness also verified
-opening/closing Notes alongside an unchanged chat draft and remount persistence. Native Buzz installation and native
-appearance/lifecycle testing are still pending; native placement is still unverified.
+opening/closing Notes alongside an unchanged chat draft and remount persistence.
+Simulated calls to the actual registered tools created/edited a page, updated the
+open editor and survived reload, without browser errors. Native Buzz installation,
+agent discovery/calls and appearance/lifecycle testing are still pending; native
+placement is still unverified.
 
 ## Development
 

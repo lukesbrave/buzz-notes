@@ -1,10 +1,12 @@
 import css from './notes.css';
+import {registerAgentTools} from './agent-tools.mjs';
 import {mountEditor} from './editor.mjs';
 import {createStore, page, block, id, restorePages, markdown, TYPES} from './store.mjs';
-export const inject = ['react', 'pages', 'panels'];
+export const inject = ['react', 'pages', 'panels', 'agents'];
 export function apply(ctx) {
   const React = ctx.react;
   const store = createStore({getItem:key=>localStorage.getItem(key), setItem:(key,value)=>localStorage.setItem(key,value)});
+  registerAgentTools(ctx.agents,store);
   const labels = {text:'Text', heading:'Heading', subheading:'Subheading', bullet:'Bulleted list', todo:'To-do', quote:'Quote'};
   function Icon({name='page'}) {
     const paths = {page:'M6 3h9l3 3v15H6z M9 8h6 M9 12h6 M9 16h4', plus:'M12 5v14 M5 12h14', search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0', trash:'M4 6h16 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7', menu:'M4 6h16 M4 12h16 M4 18h16', check:'M5 12l4 4L19 6', ideas:'M9 18h6 M10 21h4 M8 14c-5-5-2-11 4-11s9 6 4 11l-1 2H9z', more:'M5 12h.01 M12 12h.01 M19 12h.01', backup:'M12 16V3 M7 8l5-5 5 5 M4 15v6h16v-6'};
@@ -72,7 +74,7 @@ export function apply(ctx) {
         <header className="bn-topbar"><button className="bn-sidebar-toggle" aria-label={sidebarVisible?"Collapse sidebar":"Expand sidebar"} title={sidebarVisible?"Collapse sidebar":"Expand sidebar"} aria-expanded={sidebarVisible} onClick={toggleSidebar}><Icon name="menu"/></button><div className="bn-breadcrumb"><Icon/><span className="bn-ellipsis">{current?.title|| (current?'Untitled page':'Notes')}</span></div><span className="bn-saved" role="status">{snap.error?'Not saved':snap.saved?'Saved on this Mac':'On this Mac'}</span>{current&&<button aria-label="Page options" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Icon name="more"/></button>}</header>
         {snap.error&&<div role="alert" className="bn-alert">{snap.error} <button onClick={showBackup}>Backup</button></div>}
         {trash&&current&&<div className="bn-alert">This page is in Trash. <button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:false}:p)}));setTrash(false);setSelected(current.id);}}>Restore page</button></div>}
-        {menu&&current&&<div className="bn-menu"><button onClick={()=>{setModal('markdown');setMenu(false);}}>Copy as Markdown</button>{!trash&&<><button onClick={()=>{const p={...current,id:id(),title:(current.title||'Untitled page')+' (copy)',blocks:current.blocks.map(b=>({...b,id:id()})),updated:Date.now()};store.change(d=>({...d,pages:[...d.pages,p]}));choose(p);}}>Duplicate page</button><button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:true}:p)}));setMenu(false);setSelected(null);}}>Move to Trash</button></>}<button onClick={()=>setMenu(false)}>Close menu</button></div>}
+        {menu&&current&&<div className="bn-menu"><button onClick={()=>{setModal('markdown');setMenu(false);}}>Copy as Markdown</button>{!trash&&<><button onClick={()=>{const {agentCreate,...original}=current;const p={...original,id:id(),title:(current.title||'Untitled page')+' (copy)',blocks:current.blocks.map(b=>({...b,id:id()})),updated:Date.now()};store.change(d=>({...d,pages:[...d.pages,p]}));choose(p);}}>Duplicate page</button><button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:true}:p)}));setMenu(false);setSelected(null);}}>Move to Trash</button></>}<button onClick={()=>setMenu(false)}>Close menu</button></div>}
         <div className="bn-scroll">{current?<article className="bn-document" key={current.id}>
           <div className="bn-page-icon"><Icon/></div>
           {!trash&&<div className="bn-toolbar">

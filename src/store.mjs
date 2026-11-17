@@ -20,7 +20,8 @@ export function validate(value) {
 }
 export function restorePages(json) {
   if (json.length > 5_000_000) throw Error('This backup is too large (maximum 5 MB).');
-  return validate(JSON.parse(json)).pages.map(p => ({...p, id: id(), blocks: p.blocks.map(b => ({...b, id: id()}))}));
+  // Restored copies are new pages, not receipts for an earlier agent create.
+  return validate(JSON.parse(json)).pages.map(({agentCreate, ...p}) => ({...p, id: id(), blocks: p.blocks.map(b => ({...b, id: id()}))}));
 }
 export function markdown(p) {
   return '# ' + (p.title || 'Untitled page') + '\n\n' + p.blocks.map(b => ({heading:'# ', subheading:'## ', bullet:'- ', todo:b.checked ? '- [x] ' : '- [ ] ', quote:'> ', text:''}[b.type]) + b.text).join('\n\n') + '\n';
@@ -38,6 +39,15 @@ export function createStore(storage) {
     get: () => snapshot,
     subscribe: f => { listeners.add(f); return () => listeners.delete(f); },
     original: () => raw,
+    // Agent writes are atomic: never report success or change the visible draft
+    // until persistence succeeds, and never build on an unresolved human draft.
+    commit(fn) {
+      if(blocked||error)throw Error('Resolve the Notes storage error before agent edits.');
+      if(storage.getItem(KEY)!==raw)throw Error('Notes changed in another window. Reload before editing.');
+      const next=validate(fn(data));const encoded=JSON.stringify(next);
+      if(encoded.length>4_000_000)throw Error('Notebook is too large for an agent write. Back up and reduce its size.');
+      storage.setItem(KEY,encoded);data=next;raw=encoded;error='';emit();
+    },
     change(fn) {
       if (blocked) return;
       data = fn(data);

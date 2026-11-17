@@ -1,5 +1,49 @@
 # Notes — release state
 
+## 0.5.0 · 17 November 2026
+
+Candidate tested; publication receipt to follow.
+
+Luke confirmed he wants both note/content editing and plugin design/feature
+changes from the Buzz agent. Previously Notes registered no agent tools.
+The plugin now injects agents and registers six brave_notes_* tools plus a
+short per-turn instruction pointing agents to those tools and the developer guide.
+Content tools find/read/create/edit/trash/restore pages in the existing shared
+notebook. The developer-info tool supplies the public GitHub source, files,
+build/check/publish instructions and the supported plugin_request update route.
+Feature/design work still requires the agent's existing coding tools and GitHub
+access; no shell, credential or code-execution capability is granted by Notes.
+
+Tool handlers require the trusted client owner to match the connected agent's
+signed-in relay viewer. No identity is taken from tool arguments. Note reads
+and writes are limited to owned agents running through this app; independently
+hosted agents do not automatically receive these tools. Notebook scope remains
+this app profile across communities, not a separate notebook per community.
+
+Agent edits use SHA-256 page revisions and recheck identity/cancellation after
+awaiting. A changed in-memory page or changed storage on disk refuses the write.
+Agent writes commit only after storage succeeds; they cannot replace an unsaved
+human draft. Create request IDs make retries idempotent across reloads. Optional
+create receipts live with their page; duplication/additive restore omit those
+receipts. ID, storage key, version-1 notebook fields and manifest host grants
+are unchanged. Deletion is recoverable Trash only.
+
+Verification: 28 automated tests pass, including built-bundle registration,
+create/edit/persistence, create retry, foreign/unbound/cancelled callers,
+stale revisions and simultaneous human/agent writes, failed storage, malformed
+arguments, Trash/restore and all existing editor/panel/storage regressions.
+Browser harness called actual registered bundle handlers with a synthetic owned
+client: created a page, changed its title, checked a task, appended a bullet,
+updated the already-open editor, and retained all changes after reload. Browser
+error/warning log was empty. This is not a native agent run. Buzz window access
+again timed out; native tool discovery, real agent calls, installation/update
+and native lifecycle/appearance remain unverified.
+
+Matching official Buzz v1.0.1 sources checked: src/features/agents/service.ts
+(addTool/addInstructions/relay), src/buzz-mcp/session-tools.ts (AddedTool and
+session refresh), src/buzz-mcp/client.ts (trusted owner/key/signal), and
+src/buzz-mcp/plugin-tools.ts (plugin_request and owner review).
+
 ## 0.4.0 · 17 November 2026
 
 Published as `v0.4.0` at `07f7620dac3abe91719e4ef638c31b96f09993ec`.
