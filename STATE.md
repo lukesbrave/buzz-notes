@@ -2,7 +2,11 @@
 
 ## 0.1.0 · 17 November 2026
 
-Initial GitHub-installable release for standard Buzz 1.0.1.
+Published GitHub-installable release for standard Buzz 1.0.1.
+
+Release tag `v0.1.0` points to `2bcc579fe70d1d7f1336266efd72239c52ac366e`.
+Public default-branch clone verified on 17 November 2026: both `dist` files
+match the tested local artifacts byte for byte; Git update checks are enabled.
 
 - Distribution: `lukesbrave/buzz-notes`, default branch `main`, folder `dist`.
 - Stable plugin ID: `bravebrand.simple-notes`.
