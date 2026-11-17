@@ -2,6 +2,9 @@
 
 ## 0.2.0 · 17 November 2026
 
+Published as `v0.2.0` at `2c3d352b43d8ff63626a9d2c9ba1707be41cf99b`.
+Public `main/dist` readback matched both local install files byte for byte.
+
 Requested change: move Notes to the conversation's top controls so agent chat
 can stay open. The Notes channel-header launcher now opens a retained tab in
 the conversation side pane (`channelPlacement: tab`, `keepOpen: true`). The
