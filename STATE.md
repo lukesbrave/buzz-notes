@@ -1,5 +1,32 @@
 # Notes — release state
 
+## 0.4.0 · 17 November 2026
+
+User requested actual cursor-drag selection, not a select-all-only workaround.
+The title and all writing now share one ProseMirror contenteditable document.
+Native mouse selection, partial cross-block deletion, clipboard operations,
+undo/redo and keyboard selection replace the separate textarea controls.
+Selecting all writing and deleting removes formatting too. The required title
+and one blank paragraph remain after clearing. Existing sidebar controls and
+conversation panel registration are unchanged.
+
+Legacy notebook schema, storage key, plugin identity, backup format and host
+grants are unchanged. A lossless adapter retains existing titles, text, block
+IDs, types, line breaks and checked states. The editor creates stable IDs for
+new/pasted blocks. External page replacements reset local undo history to avoid
+undo overwriting a newer change from another open view. Dependencies are pinned,
+bundled and accompanied by their license notices; no runtime network imports.
+
+Validation: fifteen tests pass, including old-data round trip, mouse-style
+full/body/partial ranges, exact undo/redo and title splitting. A real browser
+mouse drag from the final quote back through task, bullet, paragraph and title
+selected the visible text; one Backspace left a blank unformatted page and Undo
+restored it. Checkbox state survived close/reopen, and sidebar collapse/expand
+worked. Copy/paste into a new page retained title, bullet, quote and checked
+to-do formatting. A regression test also covers empty trailing template/list
+blocks, which are removed when all visible writing is selected. Native Buzz
+UI verification remains pending.
+
 ## 0.3.0 · 17 November 2026
 
 Published as `v0.3.0` at `89b57f60a58d55044301ab284164be2f97d4dd81`.

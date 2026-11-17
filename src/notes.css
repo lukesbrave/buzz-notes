@@ -5,3 +5,28 @@
 @container notes (max-width:500px){.bn-sidebar {display:none;position:absolute;inset:54px auto 0 0;z-index:6;width:230px;box-shadow:10px 10px 30px #0003}.bn[data-sidebar=true] .bn-sidebar {display:flex}.bn-topbar {padding:8px 12px}.bn-document {padding:30px 32px 70px}.bn-toolbar {flex-wrap:wrap}}
 
 .bn-document[data-all-selected=true] .bn-title,.bn-document[data-all-selected=true] .bn-block {background:Highlight;color:HighlightText;border-radius:3px} .bn-document[data-all-selected=true] .bn-block textarea {color:HighlightText} .bn-selection-hint {font-size:12px;color:var(--notes-muted);margin:0 0 16px}
+
+/* One editor owns title and body, so native selection can cross every block. */
+.bn-rich {position:relative;outline:none;white-space:pre-wrap;overflow-wrap:anywhere;word-wrap:break-word;caret-color:var(--notes-text);font-size:16px;line-height:1.65;min-height:150px;user-select:text;-webkit-user-select:text}
+.bn-rich h1[data-note-title] {font-size:40px;font-weight:700;line-height:1.2;letter-spacing:-1.1px;margin:0 0 24px;min-height:1.2em}
+.bn-rich h1[data-note-title]:has(>br.ProseMirror-trailingBreak:only-child)::before {content:'Untitled page';color:var(--notes-muted);opacity:.65;pointer-events:none;position:absolute}
+.bn-rich p {margin:3px 0;min-height:1.65em}
+.bn-rich h2 {font-size:28px;font-weight:650;line-height:1.3;margin:20px 0 7px}
+.bn-rich h3 {font-size:21px;font-weight:600;line-height:1.4;margin:16px 0 5px}
+.bn-rich blockquote {margin:12px 0;border-left:3px solid var(--notes-muted);padding-left:15px}
+.bn-rich [data-note-type=bullet] {position:relative;padding-left:22px}
+.bn-rich [data-note-type=bullet]::before {content:'•';position:absolute;left:3px}
+.bn-rich [data-note-type=todo] {display:flex;gap:9px;align-items:flex-start;margin:3px 0}
+.bn-rich [data-note-type=todo]>div {flex:1;min-width:0;min-height:1.65em}
+.bn-rich .bn-task-control {flex-shrink:0;user-select:none;-webkit-user-select:none}
+.bn-rich .bn-task-control input {margin:7px 0 0;width:15px;height:15px;accent-color:var(--notes-muted)}
+.bn-rich [data-note-type=todo][data-checked=true]>div {text-decoration:line-through;color:var(--notes-muted)}
+.bn-rich ::selection {background:Highlight;color:HighlightText}
+.bn-rich .ProseMirror-selectednode {outline:2px solid var(--notes-muted)}
+.bn-rich .ProseMirror-separator {display:inline!important;border:none!important;margin:0!important}
+.bn-rich.ProseMirror-hideselection *::selection {background:transparent}
+.bn-rich .ProseMirror-gapcursor {display:none;pointer-events:none;position:absolute}
+.bn-rich+.bn-templates {margin-top:18px}
+@container notes (max-width:680px){.bn-rich h1[data-note-title]{font-size:32px}}
+
+.bn .bn-rich:focus-visible {outline:none}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-11-17
+
+- Replace separate text fields with one continuous title-and-body editor.
+- Drag across any text blocks and press Backspace/Delete to remove the selection.
+- Normal copy/cut/paste and undo/redo across the page, with existing notes and
+  block formatting preserved on load.
+- Retain the collapsible sidebar, local saving and conversation panel.
+
 ## 0.3.0 — 2026-11-17
 
 - Select all page writing with ⌘A/Ctrl+A or the Select all button, then clear it

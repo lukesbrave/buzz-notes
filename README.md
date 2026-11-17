@@ -39,15 +39,17 @@ with your notes, or restore the backup if needed.
 ## Writing
 
 - **New page** creates a blank note; its title names the sidebar entry.
-- **⌘A** (Mac) or **Ctrl+A** (Windows/Linux), while writing in the title or a
-  block, highlights all writing on the current page. **Backspace/Delete** clears
-  the title and all blocks together, leaving the page itself in place. The
-  **Select all** button does the same selection; **Esc** cancels it.
-- **Undo clear** or **⌘Z/Ctrl+Z** restores that clear before further editing or
-  closing the editor. This is a single clear/replacement undo, not full history.
+- **Drag to select** across the title, paragraphs, headings, bullets and
+  checkboxes. **Backspace/Delete** removes the selected writing. Selecting all
+  writing also clears the formatting, leaving a blank page.
+- **⌘A/Ctrl+A** or **Select all** remains available as an alternative.
+- **Copy, cut and paste** work on the selection. **⌘Z/Ctrl+Z** or **Undo** restores
+  edits; **⌘Shift+Z/Ctrl+Y** or **Redo** reapplies them. History lasts while that
+  page's editor stays open; reopening it or replacing it from another view starts
+  a fresh history.
 - Use the top-left **Collapse sidebar / Expand sidebar** button to hide or show
   your page list. The choice is remembered in this Buzz app. Search and backup
-  fields keep their normal, field-only select-all behavior.
+  fields retain their own selection behavior.
 - **Enter** creates a block; **Shift+Enter** adds a line inside a block.
 - Type **/** in an empty block or use the type menu for text, headings, bullets,
   checkboxes, and quotes.
@@ -59,7 +61,7 @@ with your notes, or restore the backup if needed.
   copies without replacing existing pages. Markdown copy exports one page as text.
 
 This first version intentionally omits inline bold/italic, images, tables,
-block dragging, general document-wide undo, collaboration, and cross-device syncing.
+reordering blocks by dragging, collaboration, and cross-device syncing.
 
 ## Where notes are saved
 
@@ -78,7 +80,10 @@ Malformed saved data is preserved rather than silently reset.
 Targets standard Buzz **1.0.1**, checked against that version's manifest, page
 registration, and theme contracts. The browser harness passed editing,
 checkboxes, reopen persistence, search, Trash/restore, and additive backup
-restore. Eight automated storage/panel tests pass. A browser layout harness also verified
+restore. Fifteen automated editor/storage/panel tests pass. Real browser mouse-drag
+selection across a title, paragraph, bullet, checkbox and quote was deleted with
+Backspace and restored with Undo; saved checkbox state and sidebar toggling were
+also verified. A browser layout harness also verified
 opening/closing Notes alongside an unchanged chat draft and remount persistence. Native Buzz installation and native
 appearance/lifecycle testing are still pending; native placement is still unverified.
 
@@ -101,3 +106,7 @@ to `main`. Never change `bravebrand.simple-notes` (manifest ID) or
 `bravebrand.simple-notes.v1` (storage key) without a migration.
 
 See [STATE.md](STATE.md) for release and verification status.
+
+The continuous editor uses bundled ProseMirror modules. No editor code is
+fetched at runtime. See [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt); the
+same license notices are included in the installable bundle.
