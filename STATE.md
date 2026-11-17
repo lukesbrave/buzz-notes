@@ -2,7 +2,12 @@
 
 ## 0.5.0 · 17 November 2026
 
-Candidate tested; publication receipt to follow.
+Published as `v0.5.0` at `0a19a37` on `main` / `dist`.
+Public main and release-commit install files match the tested package byte for
+byte (verified with a fresh request after GitHub raw caching briefly returned
+the previous bundle). The original port-18761 preview was rebuilt from canonical
+dist and reloaded; its four active pages remain, with no browser errors.
+Native Buzz has not been updated by this session.
 
 Luke confirmed he wants both note/content editing and plugin design/feature
 changes from the Buzz agent. Previously Notes registered no agent tools.
