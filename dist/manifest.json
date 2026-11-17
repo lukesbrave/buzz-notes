@@ -1,0 +1,17 @@
+{
+  "id": "bravebrand.simple-notes",
+  "name": "Notes",
+  "description": "A quiet notebook for ideas and notes. Automatically saved in this Buzz app on this Mac.",
+  "apiVersion": 1,
+  "discovery": {
+    "category": "productivity",
+    "tags": [
+      "notes",
+      "ideas",
+      "writing"
+    ]
+  },
+  "updates": {
+    "defaultEnabled": true
+  }
+}
