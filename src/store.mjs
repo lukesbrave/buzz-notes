@@ -13,6 +13,7 @@ export function validate(value) {
     const blocks = new Set();
     for (const b of p.blocks) {
       if (!b || typeof b.id !== 'string' || blocks.has(b.id) || !TYPES.includes(b.type) || typeof b.text !== 'string' || typeof b.checked !== 'boolean') throw Error('A text block in this backup is invalid.');
+      if(b.linkedPageId!==undefined&&(typeof b.linkedPageId!=='string'||!b.linkedPageId||b.linkedPageId.length>200))throw Error('A page link in this backup is invalid.');
       blocks.add(b.id);
     }
   }
@@ -21,7 +22,8 @@ export function validate(value) {
 export function restorePages(json) {
   if (json.length > 5_000_000) throw Error('This backup is too large (maximum 5 MB).');
   // Restored copies are new pages, not receipts for an earlier agent create.
-  return validate(JSON.parse(json)).pages.map(({agentCreate, ...p}) => ({...p, id: id(), blocks: p.blocks.map(b => ({...b, id: id()}))}));
+  const pages=validate(JSON.parse(json)).pages,ids=new Map(pages.map(p=>[p.id,id()]));
+  return pages.map(({agentCreate,...p})=>({...p,id:ids.get(p.id),blocks:p.blocks.map(b=>({...b,id:id(),...(b.linkedPageId?{linkedPageId:ids.get(b.linkedPageId)||b.linkedPageId}:{})}))}));
 }
 export function markdown(p) {
   return '# ' + (p.title || 'Untitled page') + '\n\n' + p.blocks.map(b => ({heading:'# ', subheading:'## ', bullet:'- ', todo:b.checked ? '- [x] ' : '- [ ] ', quote:'> ', text:''}[b.type]) + b.text).join('\n\n') + '\n';

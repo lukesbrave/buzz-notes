@@ -31,3 +31,10 @@
 @container notes (max-width:680px){.bn-rich h1[data-note-title]{font-size:32px}}
 
 .bn .bn-rich:focus-visible {outline:none}
+
+.bn .bn-page-link {display:inline-flex;vertical-align:baseline;margin-left:7px;padding:0 5px;font:inherit;font-size:15px;line-height:1.5;color:var(--notes-muted);border:1px solid var(--notes-line);border-radius:4px;user-select:none;-webkit-user-select:none;text-decoration:none}
+.bn .bn-page-link[hidden] {display:none!important}
+.bn-rich [data-note-type=todo]>.bn-page-link {flex-shrink:0;margin-top:2px}
+.bn .bn-link-title {display:block;width:100%;background:var(--notes-side);border:1px solid var(--notes-line);border-radius:6px;padding:9px;margin:7px 0 12px}
+.bn-link-choices {max-height:230px;overflow:auto;margin:14px 0;border-top:1px solid var(--notes-line);padding-top:8px}
+.bn-link-choices button {display:flex;width:100%;margin:3px 0}

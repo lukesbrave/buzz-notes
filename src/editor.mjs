@@ -9,9 +9,9 @@ import {id} from './store.mjs';
 const names={text:'paragraph',heading:'heading',subheading:'subheading',bullet:'bullet',todo:'todo',quote:'quote'};
 const types=Object.fromEntries(Object.entries(names).map(([key,value])=>[value,key]));
 function textBlock(name,tag,parseDOM=[]){return {
-  group:'block',content:'text*',marks:'',attrs:{id:{default:null},checked:{default:false}},
-  parseDOM:[{tag:`${tag}[data-note-type="${name}"]`,priority:100,getAttrs:dom=>({checked:dom.getAttribute('data-checked')==='true'})},...parseDOM],
-  toDOM:node=>[tag,{'data-note-type':name,'data-checked':node.attrs.checked?'true':'false'},0],
+  group:'block',content:'text*',marks:'',attrs:{id:{default:null},checked:{default:false},linkedPageId:{default:null}},
+  parseDOM:[{tag:`${tag}[data-note-type="${name}"]`,priority:100,getAttrs:dom=>({checked:dom.getAttribute('data-checked')==='true',linkedPageId:dom.getAttribute('data-note-link')||null}),contentElement:dom=>dom.querySelector('[data-note-content]')||dom},...parseDOM],
+  toDOM:node=>{const attrs={'data-note-type':name,'data-checked':node.attrs.checked?'true':'false','data-note-link':node.attrs.linkedPageId};return node.attrs.linkedPageId?[tag,attrs,['span',{'data-note-content':''},0],['button',{'type':'button','class':'bn-page-link','data-linked-page-id':node.attrs.linkedPageId,'contenteditable':'false','aria-label':'Open linked page','title':'Open linked page'},'↗']]:[tag,attrs,0];},
 };}
 export const schema=new Schema({nodes:{
   doc:{content:'pageTitle block+'},
@@ -26,10 +26,10 @@ export const schema=new Schema({nodes:{
 },marks:{}});
 export function pageToDoc(page){
   const text=value=>value?schema.text(value):undefined;
-  return schema.node('doc',null,[schema.node('pageTitle',null,text(page.title)),...page.blocks.map(b=>schema.node(names[b.type],{id:b.id,checked:b.checked},text(b.text)))]);
+  return schema.node('doc',null,[schema.node('pageTitle',null,text(page.title)),...page.blocks.map(b=>schema.node(names[b.type],{id:b.id,checked:b.checked,linkedPageId:b.linkedPageId||null},text(b.text)))]);
 }
 export function docToWriting(doc){
-  const blocks=[];doc.forEach((node,offset,index)=>{if(index)blocks.push({id:node.attrs.id||id(),type:types[node.type.name],text:node.textContent,checked:!!node.attrs.checked});});
+  const blocks=[];doc.forEach((node,offset,index)=>{if(index)blocks.push({id:node.attrs.id||id(),type:types[node.type.name],text:node.textContent,checked:!!node.attrs.checked,...(node.attrs.linkedPageId?{linkedPageId:node.attrs.linkedPageId}:{})});});
   return {title:doc.firstChild.textContent,blocks};
 }
 const identities=new Plugin({appendTransaction(transactions,oldState,state){
@@ -85,15 +85,16 @@ export function createEditorState(page){
     ]}),keymap(baseKeymap),
   ]});
 }
-export function mountEditor(element,page,{onChange,onSelection,readOnly=false}){
+export function mountEditor(element,page,{onChange,onSelection,onOpenPage,readOnly=false}){
   let editable=!readOnly;
   function notify(view){
     const node=view.state.selection.$from.parent;
-    onSelection({type:types[node.type.name]||'text',undo:undoDepth(view.state)>0,redo:redoDepth(view.state)>0,slash:node.type.name==='paragraph'&&node.textContent==='/'});
+    onSelection({blockId:node.attrs.id||null,linkedPageId:node.attrs.linkedPageId||null,type:types[node.type.name]||'text',undo:undoDepth(view.state)>0,redo:redoDepth(view.state)>0,slash:node.type.name==='paragraph'&&node.textContent==='/'});
   }
   const view=new EditorView(element,{
     state:createEditorState(page),editable:()=>editable,
     attributes:{class:'bn-rich','aria-label':'Page writing',role:'textbox','aria-multiline':'true',spellcheck:'true'},
+    handleDOMEvents:{click:(view,event)=>{const link=event.target.closest?.('[data-linked-page-id]');if(!link)return false;event.preventDefault();onOpenPage?.(link.dataset.linkedPageId);return true;}},
     dispatchTransaction(tr){
       const previous=view.state.doc;
       const result=view.state.applyTransaction(tr);view.updateState(result.state);
@@ -104,8 +105,9 @@ export function mountEditor(element,page,{onChange,onSelection,readOnly=false}){
       const dom=document.createElement('div');dom.dataset.noteType='todo';
       const label=document.createElement('span');label.contentEditable='false';label.className='bn-task-control';
       const input=document.createElement('input');input.type='checkbox';input.setAttribute('aria-label','Complete to-do');input.tabIndex=-1;input.disabled=!editable;
-      label.appendChild(input);const contentDOM=document.createElement('div');dom.append(label,contentDOM);
-      function update(next){if(next.type!==node.type)return false;node=next;input.checked=!!node.attrs.checked;input.disabled=!editable;dom.dataset.checked=String(input.checked);return true;}
+      label.appendChild(input);const contentDOM=document.createElement('div');contentDOM.dataset.noteContent='';dom.append(label,contentDOM);
+      const link=document.createElement('button');link.type='button';link.contentEditable='false';link.className='bn-page-link';link.textContent='↗';link.setAttribute('aria-label','Open linked page');link.title='Open linked page';dom.appendChild(link);
+      function update(next){if(next.type!==node.type)return false;node=next;input.checked=!!node.attrs.checked;input.disabled=!editable;dom.dataset.checked=String(input.checked);link.hidden=!node.attrs.linkedPageId;if(node.attrs.linkedPageId)dom.dataset.noteLink=node.attrs.linkedPageId;else delete dom.dataset.noteLink;if(node.attrs.linkedPageId)link.dataset.linkedPageId=node.attrs.linkedPageId;else delete link.dataset.linkedPageId;return true;}
       update(node);
       input.addEventListener('change',()=>{const pos=getPos();if(editable&&typeof pos==='number')view.dispatch(view.state.tr.setNodeMarkup(pos,undefined,{...node.attrs,checked:input.checked}));});
       return {dom,contentDOM,update,stopEvent:event=>label.contains(event.target),ignoreMutation:mutation=>mutation.type!=='selection'&&label.contains(mutation.target)};
@@ -136,7 +138,7 @@ export function mountEditor(element,page,{onChange,onSelection,readOnly=false}){
       if(state.selection.$from.parent.type===schema.nodes.pageTitle&&state.selection.$to.parent.type===schema.nodes.pageTitle){view.dispatch(state.tr.setSelection(TextSelection.create(state.doc,state.doc.firstChild.nodeSize+1)));state=view.state;}
       const parent=state.selection.$from.parent;
       if(parent.textContent==='/'){view.dispatch(state.tr.delete(state.selection.$from.start(),state.selection.$from.end()));state=view.state;}
-      setBlockType(schema.nodes[names[type]],{id:null,checked:false})(state,view.dispatch);view.focus();
+      setBlockType(schema.nodes[names[type]],{...parent.attrs})(state,view.dispatch);view.focus();
     },
     destroy(){view.destroy();},
   };

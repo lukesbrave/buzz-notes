@@ -63,6 +63,31 @@ with your notes, or restore the backup if needed.
 This first version intentionally omits inline bold/italic, images, tables,
 reordering blocks by dragging, collaboration, and cross-device syncing.
 
+## Link an idea to its own page
+
+Keep your existing list, with one block or checklist item per idea:
+
+1. Click in the idea's text and choose **Link page** in the writing toolbar.
+2. Choose **Create linked page**, or pick an existing page.
+3. Use the small **↗ Open linked page** button beside the idea to open it.
+4. Use **← Back** above the page to return to the list.
+
+New detail pages start with **Brief**, **Script**, **Related content**, and
+**References & links** sections. Edit them like any other page. Links use page
+IDs, so renaming a page keeps its links working. The original list text and
+checkbox state are preserved. You can link further notes from a detail page too.
+
+Click into a linked block and choose **Change link** to change or remove its
+link. Removing a link does not delete either page. Linked pages remain in the
+sidebar. If a destination is in Trash, opening the link shows its restore view.
+The sidebar **View Trash** control only changes folders; **Back to pages**
+returns to your active notes.
+
+JSON backups retain links, and restoring a whole notebook reconnects links to
+its restored copies. Markdown copy exports the writing, not interactive page
+links. Old notebooks open without conversion. Avoid editing linked notes in an
+older plugin version, which does not know how to retain their links.
+
 ## Use an agent with Notes
 
 Update and enable Notes, then ask your agent to create or edit a page. For example:
@@ -109,7 +134,7 @@ Malformed saved data is preserved rather than silently reset.
 Targets standard Buzz **1.0.1**, checked against that version's manifest, page
 registration, theme and agent-tool contracts. The browser harness passed editing,
 checkboxes, reopen persistence, search, Trash/restore, and additive backup
-restore. Twenty-eight automated editor/storage/panel/agent tests pass. Real browser mouse-drag
+restore. Thirty-four automated editor/storage/panel/agent tests pass. Real browser mouse-drag
 selection across a title, paragraph, bullet, checkbox and quote was deleted with
 Backspace and restored with Undo; saved checkbox state and sidebar toggling were
 also verified. A browser layout harness also verified

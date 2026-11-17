@@ -1,5 +1,32 @@
 # Notes — release state
 
+## 0.6.0 · 17 November 2026
+
+Luke chose to keep the current ideas list, with each idea linking to its own
+editable detail page, rather than a database table. Adds Link page/Change link
+for the selected body block, an inline open-page button, and a Back control.
+Create linked page preserves the source idea and builds Brief, Script, Related
+content and References & links sections. Existing active pages can also be linked;
+unlinking removes only the reference. Trashed targets open their restore view;
+missing targets report that they cannot be found. The sidebar folder switch is
+now View Trash / Back to pages, clarifying the earlier apparent-deletion report.
+No user's existing ideas are automatically converted or sent anywhere.
+
+Optional linkedPageId is preserved by the editor, checkbox updates, text edits,
+agent create/edit tools and JSON backup. Restore remaps references to the new
+copies. Links use page IDs and survive renames. Legacy notes keep the same schema
+version, storage key and plugin ID; manifest grants are unchanged. An older
+editor version will not preserve links when rewriting a linked block. Markdown
+copy remains text-only. Links are at block level, not arbitrary inline selections.
+
+Validation: 34 tests pass, covering legacy behavior plus atomic link/page creation,
+existing links, rename/unlink, restored-copy references, all block kinds through
+the editor/store, selection clear/undo, and agent link edits. Browser harness
+verified creation from a checklist item, new detail sections, Back navigation,
+opening the linked page, linking a paragraph to an existing page, and both links
+persisting after reload. Browser warning/error log empty. This is browser evidence;
+native Buzz UI/agent testing remains pending. Distribution remains main/dist.
+
 ## 0.5.1 · 17 November 2026
 
 Published tag `v0.5.1`, runtime commit `46f346a`, main/dist. Original preview

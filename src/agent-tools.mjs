@@ -1,6 +1,6 @@
 import {block, page, TYPES, markdown} from './store.mjs';
 const str={type:'string'};
-const blockInput={type:'object',properties:{type:{type:'string',enum:TYPES},text:str,checked:{type:'boolean'}},required:['type','text'],additionalProperties:false};
+const blockInput={type:'object',properties:{type:{type:'string',enum:TYPES},text:str,checked:{type:'boolean'},linkedPageId:{...str,description:'Optional existing active Notes page ID to link this block to.'}},required:['type','text'],additionalProperties:false};
 const pageFields={pageId:{...str,description:'Exact ID returned by brave_notes_list or brave_notes_create.'},expectedRevision:{...str,description:'Revision from brave_notes_get. Re-read and reconcile if it changed.'}};
 const guide={
   pluginId:'bravebrand.simple-notes',repository:'https://github.com/lukesbrave/buzz-notes',branch:'main',installFolder:'dist',
@@ -16,7 +16,7 @@ const guide={
 };
 function checkFields(args,allowed){if(!args||typeof args!=='object'||Array.isArray(args))throw Error('Arguments must be an object.');for(const key of Object.keys(args))if(!allowed.includes(key))throw Error(`Unknown argument: ${key}`);}
 function string(value,name,max=100000){if(typeof value!=='string'||value.length>max)throw Error(`${name} must be text of at most ${max} characters.`);return value;}
-function inputBlock(value){checkFields(value,['type','text','checked']);if(!TYPES.includes(value.type))throw Error('Invalid block type.');if(value.checked!==undefined&&typeof value.checked!=='boolean')throw Error('checked must be boolean.');return {...block(value.type,string(value.text,'Block text')),checked:value.checked??false};}
+function inputBlock(value){checkFields(value,['type','text','checked','linkedPageId']);if(!TYPES.includes(value.type))throw Error('Invalid block type.');if(value.checked!==undefined&&typeof value.checked!=='boolean')throw Error('checked must be boolean.');return {...block(value.type,string(value.text,'Block text')),checked:value.checked??false,...(value.linkedPageId!==undefined?{linkedPageId:string(value.linkedPageId,'linkedPageId',200)}:{})};}
 function array(value,name,max=500){if(!Array.isArray(value)||value.length>max)throw Error(`${name} must be an array of at most ${max} items.`);return value;}
 export async function revision(page){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(page)));return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');}
 export function registerAgentTools(agents,store){
@@ -27,6 +27,7 @@ export function registerAgentTools(agents,store){
     if(!client?.owner||state?.status!=='ready'||state.session?.viewer!==client.owner)throw Error('Notes tools require an agent owned by the signed-in Buzz member, running through this Buzz app.');
     const saved=store.get();if(saved.blocked||saved.error)throw Error('Notes has an unresolved storage error or unsaved draft. Ask the owner to resolve it before agent edits.');
   }
+  function checkTarget(key,sourceId){if(key===sourceId||!store.get().data.pages.some(p=>p.id===key&&!p.trashed))throw Error('Link target must be a different active Notes page.');}
   function find(pageId){string(pageId,'pageId',200);const p=store.get().data.pages.find(p=>p.id===pageId);if(!p)throw Error('Page not found. Use brave_notes_list to find its exact ID.');return p;}
   async function read(p){return {pageId:p.id,title:p.title,trashed:p.trashed,updated:p.updated,revision:await revision(p),blocks:p.blocks,markdown:markdown(p)};}
   async function expected(client,args){authorize(client);const p=find(args.pageId);if(await revision(p)!==args.expectedRevision)throw Error('Revision conflict: the page changed. Read it again and reconcile your edit.');authorize(client);return p;}
@@ -48,18 +49,20 @@ export function registerAgentTools(agents,store){
     const normalized=source.map(inputBlock);const fingerprint=JSON.stringify({title,blocks:normalized.map(({id,...b})=>b)});
     const existing=store.get().data.pages.find(p=>p.agentCreate?.owner===client.owner&&p.agentCreate?.requestId===requestId);
     if(existing){if(existing.agentCreate.fingerprint!==fingerprint)throw Error('requestId already used with different content.');return {...await read(existing),replayed:true};}
+    for(const b of normalized)if(b.linkedPageId!==undefined)checkTarget(b.linkedPageId);
     const p={...page(title),blocks:normalized,agentCreate:{owner:client.owner,requestId,fingerprint}};
     authorize(client);store.commit(d=>({...d,pages:[...d.pages,p]}));return read(p);
   });
-  add('brave_notes_edit','Edit one Notes page after brave_notes_get: rename it, update specified blocks, append blocks or remove specified blocks. Requires the exact current revision; never overwrites a newer human edit. At least one change is required.',{
-    ...pageFields,title:str,edits:{type:'array',maxItems:500,items:{type:'object',properties:{blockId:str,text:str,type:{type:'string',enum:TYPES},checked:{type:'boolean'}},required:['blockId'],additionalProperties:false}},
+  add('brave_notes_edit','Edit one Notes page after brave_notes_get: rename it, update specified blocks, link a block to another Notes page, append blocks or remove specified blocks. Requires the exact current revision; never overwrites a newer human edit. At least one change is required.',{
+    ...pageFields,title:str,edits:{type:'array',maxItems:500,items:{type:'object',properties:{blockId:str,text:str,type:{type:'string',enum:TYPES},checked:{type:'boolean'},linkedPageId:{type:['string','null'],description:'Existing active page ID, or null to remove this block’s link.'}},required:['blockId'],additionalProperties:false}},
     append:{type:'array',items:blockInput,maxItems:500},removeBlockIds:{type:'array',items:str,maxItems:500},
   },['pageId','expectedRevision'],async(client,args)=>{
     const p=await expected(client,args);if(p.trashed)throw Error('Restore this page before editing it.');
     if(args.title===undefined&&!args.edits?.length&&!args.append?.length&&!args.removeBlockIds?.length)throw Error('No changes supplied.');
     const title=args.title===undefined?p.title:string(args.title,'title',1000);const edits=array(args.edits??[],'edits'),removes=array(args.removeBlockIds??[],'removeBlockIds'),added=array(args.append??[],'append').map(inputBlock);
+    for(const b of added)if(b.linkedPageId!==undefined)checkTarget(b.linkedPageId,p.id);
     const ids=new Set(p.blocks.map(b=>b.id)),seen=new Set();const updates=new Map();
-    for(const edit of edits){checkFields(edit,['blockId','text','type','checked']);if(!ids.has(edit.blockId)||seen.has(edit.blockId))throw Error('Unknown or repeated block ID. Read the page again.');seen.add(edit.blockId);const patch={};if(edit.text!==undefined)patch.text=string(edit.text,'text');if(edit.type!==undefined){if(!TYPES.includes(edit.type))throw Error('Invalid block type.');patch.type=edit.type;}if(edit.checked!==undefined){if(typeof edit.checked!=='boolean')throw Error('checked must be boolean.');patch.checked=edit.checked;}if(!Object.keys(patch).length)throw Error('A block edit needs text, type or checked.');updates.set(edit.blockId,patch);}
+    for(const edit of edits){checkFields(edit,['blockId','text','type','checked','linkedPageId']);if(!ids.has(edit.blockId)||seen.has(edit.blockId))throw Error('Unknown or repeated block ID. Read the page again.');seen.add(edit.blockId);const patch={};if(edit.text!==undefined)patch.text=string(edit.text,'text');if(edit.type!==undefined){if(!TYPES.includes(edit.type))throw Error('Invalid block type.');patch.type=edit.type;}if(edit.checked!==undefined){if(typeof edit.checked!=='boolean')throw Error('checked must be boolean.');patch.checked=edit.checked;}if(edit.linkedPageId!==undefined){if(edit.linkedPageId===null)patch.linkedPageId=undefined;else{checkTarget(edit.linkedPageId,p.id);patch.linkedPageId=edit.linkedPageId;}}if(!Object.keys(patch).length)throw Error('A block edit needs text, type, checked or linkedPageId.');updates.set(edit.blockId,patch);}
     for(const key of removes){if(!ids.has(key)||seen.has(key))throw Error('Unknown, repeated or conflicting removed block ID.');seen.add(key);}
     const blocks=[...p.blocks.filter(b=>!removes.includes(b.id)).map(b=>({...b,...updates.get(b.id)})),...added];if(!blocks.length)blocks.push(block());
     return read(commit(client,p,current=>({...current,title,blocks})));

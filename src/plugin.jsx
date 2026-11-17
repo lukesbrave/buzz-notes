@@ -1,4 +1,5 @@
 import css from './notes.css';
+import {linkBlock,createLinkedPage} from './page-links.mjs';
 import {registerAgentTools} from './agent-tools.mjs';
 import {mountEditor} from './editor.mjs';
 import {createStore, page, block, id, restorePages, markdown, TYPES} from './store.mjs';
@@ -12,11 +13,11 @@ export function apply(ctx) {
     const paths = {page:'M6 3h9l3 3v15H6z M9 8h6 M9 12h6 M9 16h4', plus:'M12 5v14 M5 12h14', search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0', trash:'M4 6h16 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7', menu:'M4 6h16 M4 12h16 M4 18h16', check:'M5 12l4 4L19 6', ideas:'M9 18h6 M10 21h4 M8 14c-5-5-2-11 4-11s9 6 4 11l-1 2H9z', more:'M5 12h.01 M12 12h.01 M19 12h.01', backup:'M12 16V3 M7 8l5-5 5 5 M4 15v6h16v-6'};
     return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={paths[name] || paths.page}/></svg>;
   }
-  function Writing({page,readOnly,controller,onChange,onSelection,focusOnMount}) {
-    const mount=React.useRef(null), callbacks=React.useRef({onChange,onSelection});
-    callbacks.current={onChange,onSelection};
+  function Writing({page,readOnly,controller,onChange,onSelection,onOpenPage,focusOnMount}) {
+    const mount=React.useRef(null), callbacks=React.useRef({onChange,onSelection,onOpenPage});
+    callbacks.current={onChange,onSelection,onOpenPage};
     React.useLayoutEffect(()=>{
-      const editor=mountEditor(mount.current,page,{readOnly,onChange:writing=>callbacks.current.onChange(writing),onSelection:state=>callbacks.current.onSelection(state)});
+      const editor=mountEditor(mount.current,page,{readOnly,onChange:writing=>callbacks.current.onChange(writing),onSelection:state=>callbacks.current.onSelection(state),onOpenPage:key=>callbacks.current.onOpenPage(key)});
       controller.current=editor;if(focusOnMount)editor.focusTitle();
       return()=>{if(controller.current===editor)controller.current=null;editor.destroy();};
     },[page.id]);
@@ -29,6 +30,9 @@ export function apply(ctx) {
     const [query,setQuery]=React.useState('');
     const [trash,setTrash]=React.useState(false);
     const [menu,setMenu]=React.useState(false);
+    const [backStack,setBackStack]=React.useState([]);
+    const [linking,setLinking]=React.useState(null),[linkTitle,setLinkTitle]=React.useState(''),[linkError,setLinkError]=React.useState('');
+    const [notice,setNotice]=React.useState('');
     const [sidebar,setSidebar]=React.useState(()=>{try{const value=localStorage.getItem('bravebrand.simple-notes.sidebar');return value===null?null:value==='open';}catch{return null;}});
     const [narrow,setNarrow]=React.useState(false);
     const sidebarVisible=sidebar??!narrow;
@@ -54,13 +58,26 @@ export function apply(ctx) {
     },[modal]);
     const edit=fn=>{if(current&&!trash)store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...fn(p),updated:Date.now()}:p)}));};
     function addPage() {const p=page();store.change(d=>({...d,pages:[...d.pages,p]}));setTrash(false);setQuery('');setSelected(p.id);if(narrow)setSidebar(false);setFocusNew(p.id);}
-    function choose(p) {setSelected(p.id);setMenu(false);if(narrow)setSidebar(false);}
+    function choose(p) {setNotice('');setSelected(p.id);setMenu(false);if(narrow)setSidebar(false);}
+    function openPage(key,remember=true){
+      const target=snap.data.pages.find(p=>p.id===key);
+      if(!target){setNotice('This linked page could not be found. It may be from another notebook.');return;}
+      if(remember&&current&&current.id!==key)setBackStack(items=>[...items,current.id]);
+      setTrash(target.trashed);setQuery('');choose(target);
+    }
+    function goBack(){const key=backStack.at(-1);setBackStack(items=>items.slice(0,-1));openPage(key,false);}
+    function showLink(){const b=current?.blocks.find(b=>b.id===editorState.blockId);if(!b)return;setLinking({sourceId:current.id,blockId:b.id,existing:b.linkedPageId});setLinkTitle(b.text.trim().slice(0,160));setLinkError('');}
+    function saveLink(targetId,create=false){try{
+      let next;
+      store.commit(data=>{if(create){const result=createLinkedPage(data,linking.sourceId,linking.blockId,linkTitle);next=result.created;return result.data;}return linkBlock(data,linking.sourceId,linking.blockId,targetId);});
+      setLinking(null);if(next){setBackStack(items=>[...items,linking.sourceId]);setTrash(false);setQuery('');choose(next);}
+    }catch(error){setLinkError(error.message);}}
     const backupText=modal==='export'?JSON.stringify(snap.data,null,2):modal==='original'?(store.original()||'No saved data could be read.'):modal==='markdown'&&current?markdown(current):'';
     function showBackup(){setMenu(false);setModal(snap.blocked?'original':'export');}
     const filtered=pages.filter(p=>(p.title+' '+p.blocks.map(b=>b.text).join(' ')).toLowerCase().includes(query.toLowerCase()));
     const blank=current&&!current.title&&current.blocks.length===1&&!current.blocks[0].text;
     function template(type){const blocks=type==='idea'?[block('subheading','The idea'),block(),block('subheading','Why it matters'),block(),block('subheading','Notes & links'),block()]:[block('todo'),block('todo'),block('todo')];edit(p=>({...p,title:type==='idea'?'Content idea':'To-do list',blocks}));}
-    return <div style={{containerType:'inline-size',containerName:'notes',height:'100%',minHeight:0}}><section className="bn" ref={root} data-sidebar={sidebarVisible} aria-label="Notes" onKeyDown={e=>{if(e.key==='Escape'){if(modal)setModal(null);else{setMenu(false);if(narrow)setSidebar(false);}}}}>
+    return <div style={{containerType:'inline-size',containerName:'notes',height:'100%',minHeight:0}}><section className="bn" ref={root} data-sidebar={sidebarVisible} aria-label="Notes" onKeyDown={e=>{if(e.key==='Escape'){if(linking){setLinking(null);return;}if(modal)setModal(null);else{setMenu(false);if(narrow)setSidebar(false);}}}}>
       <style>{css}</style>
       <aside className="bn-sidebar" aria-label="Your pages">
         <div className="bn-brand"><Icon/>Notes</div>
@@ -68,10 +85,12 @@ export function apply(ctx) {
         <button className="bn-new" onClick={addPage} disabled={snap.blocked}><Icon name="plus"/>New page</button>
         <div className="bn-label">{trash?'Trash':'Your pages'} <span style={{float:'right'}}>{pages.length}</span></div>
         <nav className="bn-pages" aria-label="Pages">{filtered.map(p=><button key={p.id} aria-current={current?.id===p.id?'page':undefined} onClick={()=>choose(p)}><Icon/><span className="bn-ellipsis">{p.title||'Untitled page'}</span></button>)}{!filtered.length&&<div className="bn-empty-list">{query?'No matching notes.':trash?'Nothing in the trash.':'Your next idea starts here.'}</div>}</nav>
-        <div className="bn-side-footer"><button onClick={()=>{setTrash(!trash);setQuery('');setMenu(false);}}><Icon name={trash?'page':'trash'}/>{trash?'All pages':'Trash'}</button><button onClick={showBackup}><Icon name="backup"/>Backup</button></div>
+        <div className="bn-side-footer"><button onClick={()=>{setTrash(!trash);setQuery('');setMenu(false);}}><Icon name={trash?'page':'trash'}/>{trash?'Back to pages':'View Trash'}</button><button onClick={showBackup}><Icon name="backup"/>Backup</button></div>
       </aside>
       <main className="bn-main">
-        <header className="bn-topbar"><button className="bn-sidebar-toggle" aria-label={sidebarVisible?"Collapse sidebar":"Expand sidebar"} title={sidebarVisible?"Collapse sidebar":"Expand sidebar"} aria-expanded={sidebarVisible} onClick={toggleSidebar}><Icon name="menu"/></button><div className="bn-breadcrumb"><Icon/><span className="bn-ellipsis">{current?.title|| (current?'Untitled page':'Notes')}</span></div><span className="bn-saved" role="status">{snap.error?'Not saved':snap.saved?'Saved on this Mac':'On this Mac'}</span>{current&&<button aria-label="Page options" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Icon name="more"/></button>}</header>
+        <header className="bn-topbar"><button className="bn-sidebar-toggle" aria-label={sidebarVisible?"Collapse sidebar":"Expand sidebar"} title={sidebarVisible?"Collapse sidebar":"Expand sidebar"} aria-expanded={sidebarVisible} onClick={toggleSidebar}><Icon name="menu"/></button>{backStack.length>0&&<button aria-label="Back to previous page" onClick={goBack}>← Back</button>}<div className="bn-breadcrumb"><Icon/><span className="bn-ellipsis">{current?.title|| (current?'Untitled page':'Notes')}</span></div><span className="bn-saved" role="status">{snap.error?'Not saved':snap.saved?'Saved on this Mac':'On this Mac'}</span>{current&&<button aria-label="Page options" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Icon name="more"/></button>}</header>
+        {notice&&<div role="status" className="bn-alert">{notice} <button onClick={()=>setNotice('')}>Dismiss</button></div>}
+        {trash&&!current&&<div className="bn-alert">You’re viewing Trash. <button onClick={()=>setTrash(false)}>Back to pages</button></div>}
         {snap.error&&<div role="alert" className="bn-alert">{snap.error} <button onClick={showBackup}>Backup</button></div>}
         {trash&&current&&<div className="bn-alert">This page is in Trash. <button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:false}:p)}));setTrash(false);setSelected(current.id);}}>Restore page</button></div>}
         {menu&&current&&<div className="bn-menu"><button onClick={()=>{setModal('markdown');setMenu(false);}}>Copy as Markdown</button>{!trash&&<><button onClick={()=>{const {agentCreate,...original}=current;const p={...original,id:id(),title:(current.title||'Untitled page')+' (copy)',blocks:current.blocks.map(b=>({...b,id:id()})),updated:Date.now()};store.change(d=>({...d,pages:[...d.pages,p]}));choose(p);}}>Duplicate page</button><button onClick={()=>{store.change(d=>({...d,pages:d.pages.map(p=>p.id===current.id?{...p,trashed:true}:p)}));setMenu(false);setSelected(null);}}>Move to Trash</button></>}<button onClick={()=>setMenu(false)}>Close menu</button></div>}
@@ -80,16 +99,24 @@ export function apply(ctx) {
           {!trash&&<div className="bn-toolbar">
             <select aria-label="Block type" value={editorState.type} onChange={e=>editor.current?.setType(e.target.value)}>{TYPES.map(t=><option key={t} value={t}>{labels[t]}</option>)}</select>
             <button onMouseDown={e=>e.preventDefault()} onClick={()=>editor.current?.addBlock()}><Icon name="plus"/>Add block</button>
+            <button onMouseDown={e=>e.preventDefault()} disabled={!editorState.blockId} onClick={showLink}>{editorState.linkedPageId?'Change link':'Link page'}</button>
             <button onMouseDown={e=>e.preventDefault()} onClick={()=>editor.current?.selectAll()}>Select all</button>
             <button onMouseDown={e=>e.preventDefault()} onClick={()=>editor.current?.undo()} disabled={!editorState.undo}>Undo</button>
             <button onMouseDown={e=>e.preventDefault()} onClick={()=>editor.current?.redo()} disabled={!editorState.redo}>Redo</button>
           </div>}
-          <Writing page={current} readOnly={trash} controller={editor} focusOnMount={focusNew===current.id} onChange={writing=>edit(p=>({...p,...writing}))} onSelection={setEditorState}/>
+          <Writing page={current} readOnly={trash} controller={editor} focusOnMount={focusNew===current.id} onChange={writing=>edit(p=>({...p,...writing}))} onSelection={setEditorState} onOpenPage={openPage}/>
           {editorState.slash&&!trash&&<div className="bn-menu bn-slash" aria-label="Choose block type">{TYPES.map(t=><button key={t} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.current?.setType(t)}>{labels[t]}</button>)}</div>}
           {blank&&!trash&&<div className="bn-templates"><button onClick={()=>template('idea')}><Icon name="ideas"/>Content idea</button><button onClick={()=>template('todo')}><Icon name="check"/>To-do list</button></div>}
           <div className="bn-hint">{current.blocks.map(b=>b.text).join(' ').trim().split(/\s+/).filter(Boolean).length} words · {trash?'Restore this page to edit it.':'Enter for a new block · Shift + Enter for a new line'}</div>
         </article>:<div className="bn-empty"><Icon/><h2>{trash?'Nothing in the trash':'A little space for your thoughts'}</h2><p>{trash?'Removed pages will stay here until you restore them.':'Capture an idea. Keep a note. Make it yours.'}</p>{!trash&&!snap.blocked&&<button onClick={addPage}><Icon name="plus"/>Create a page</button>}</div>}</div>
       </main>
+      {linking&&<div className="bn-modal-shade"><div className="bn-modal" role="dialog" aria-modal="true" aria-label="Link this idea to a page" onKeyDown={e=>{if(e.key!=='Tab')return;const items=[...e.currentTarget.querySelectorAll('input,button:not(:disabled)')];const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}>
+        <h2>Link this idea to a page</h2><p>Create a page for the brief, script and related content, or choose an existing page.</p>
+        <label>New page title<input className="bn-link-title" aria-label="New linked page title" autoFocus value={linkTitle} onChange={e=>setLinkTitle(e.target.value)} maxLength={1000}/></label>
+        <button onClick={()=>saveLink(null,true)}>Create linked page</button>
+        <div className="bn-link-choices" aria-label="Existing pages">{snap.data.pages.filter(p=>!p.trashed&&p.id!==linking.sourceId).map(p=><button key={p.id} onClick={()=>saveLink(p.id)}><Icon/>{p.title||'Untitled page'}</button>)}</div>
+        {linkError&&<p role="alert">{linkError}</p>}<div className="bn-modal-actions">{linking.existing&&<button onClick={()=>saveLink(null)}>Remove link</button>}<button onClick={()=>setLinking(null)}>Cancel</button></div>
+      </div></div>}
       {modal&&<div className="bn-modal-shade"><div className="bn-modal" role="dialog" aria-modal="true" aria-labelledby="bn-dialog-title" ref={dialog} onKeyDown={e=>{if(e.key!=='Tab')return;const els=[...dialog.current.querySelectorAll('button:not(:disabled),textarea')];const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}>
         <h2 id="bn-dialog-title">{modal==='import'?'Restore a backup':modal==='markdown'?'Copy this page':modal==='original'?'Recover saved data':'Back up your notes'}</h2>
         <p>{modal==='import'?'Paste a Notes backup below. Its pages will be added as new copies; existing notes stay unchanged.':modal==='markdown'?'Copy the text below to use this page anywhere that supports Markdown.':'Notes are stored in this Buzz app on this Mac. Copy the text below into a file somewhere safe. It includes pages in Trash. Clearing app data can remove your notes.'}</p>

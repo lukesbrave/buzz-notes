@@ -131,3 +131,14 @@ test('developer guide exposes source and supported update route without notebook
   assert.equal(f.instructions.length,1);assert.match(f.instructions[0].text,/brave_notes_developer_info/);
   assert.ok(new TextEncoder().encode(f.instructions[0].text).length<4096);
 });
+
+test('agent links existing pages, preserves links during text edits and can unlink without deleting pages',async()=>{
+ const f=fixture(),source=await f.create(),target=await f.create({title:'Script'});
+ let linked=await f.call('edit',{pageId:source.pageId,expectedRevision:source.revision,edits:[{blockId:source.blocks[0].id,linkedPageId:target.pageId}]});
+ assert.equal(linked.blocks[0].linkedPageId,target.pageId);
+ linked=await f.call('edit',{pageId:linked.pageId,expectedRevision:linked.revision,edits:[{blockId:linked.blocks[0].id,text:'Renamed idea'}]});
+ assert.equal(linked.blocks[0].linkedPageId,target.pageId);
+ await assert.rejects(f.call('edit',{pageId:linked.pageId,expectedRevision:linked.revision,edits:[{blockId:linked.blocks[0].id,linkedPageId:'missing'}]}),/Link target/);
+ const cleared=await f.call('edit',{pageId:linked.pageId,expectedRevision:linked.revision,edits:[{blockId:linked.blocks[0].id,linkedPageId:null}]});
+ assert.equal(cleared.blocks[0].linkedPageId,undefined);assert.equal((await f.call('get',{pageId:target.pageId})).title,'Script');
+});
