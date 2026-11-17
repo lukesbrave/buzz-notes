@@ -2,6 +2,10 @@
 
 ## 0.4.0 · 17 November 2026
 
+Published as `v0.4.0` at `07f7620dac3abe91719e4ef638c31b96f09993ec`.
+The existing local preview was rebuilt from canonical dist and reloaded at its
+original URL, preserving that preview’s notebook storage.
+
 User requested actual cursor-drag selection, not a select-all-only workaround.
 The title and all writing now share one ProseMirror contenteditable document.
 Native mouse selection, partial cross-block deletion, clipboard operations,
